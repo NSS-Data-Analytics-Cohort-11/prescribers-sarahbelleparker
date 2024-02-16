@@ -189,7 +189,7 @@ ORDER BY total_claim_count DESC;
 --**Warning:** Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
 SELECT npi, drug_name
 FROM prescriber
-	FULL JOIN drug ON 1 = 1
+	CROSS JOIN drug
 WHERE specialty_description = 'Pain Management' AND
 	nppes_provider_city = 'NASHVILLE' AND
 	opioid_drug_flag = 'Y';
@@ -199,7 +199,7 @@ WHERE specialty_description = 'Pain Management' AND
 --You should report the npi, the drug name, and the number of claims (total_claim_count).
 SELECT prescriber.npi, drug.drug_name, SUM(total_claim_count)
 FROM prescriber
-	FULL JOIN drug ON 1 = 1
+	CROSS JOIN drug
 	LEFT JOIN prescription ON prescription.npi = prescriber.npi AND drug.drug_name = prescription.drug_name
 WHERE specialty_description = 'Pain Management' AND
 	nppes_provider_city = 'NASHVILLE' AND
@@ -211,7 +211,7 @@ GROUP BY prescriber.npi, drug.drug_name;
 SELECT prescriber.npi, drug.drug_name, 
 	COALESCE(SUM(total_claim_count), 0)
 FROM prescriber
-	FULL JOIN drug ON 1 = 1
+	CROSS JOIN drug
 	LEFT JOIN prescription ON prescription.npi = prescriber.npi AND drug.drug_name = prescription.drug_name
 WHERE specialty_description = 'Pain Management' AND
 	nppes_provider_city = 'NASHVILLE' AND
