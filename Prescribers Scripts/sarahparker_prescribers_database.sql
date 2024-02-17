@@ -38,10 +38,10 @@ LIMIT 1;
 
 
 --1b. Repeat the above, but this time report the nppes_provider_first_name, nppes_provider_last_org_name,  specialty_description, and the total number of claims.
-SELECT nppes_provider_first_name, nppes_provider_last_org_name, specialty_description, SUM(total_claim_count)
+SELECT prescriber.npi, nppes_provider_first_name, nppes_provider_last_org_name, specialty_description, SUM(total_claim_count)
 FROM prescription
 	INNER JOIN prescriber ON prescriber.npi = prescription.npi
-GROUP BY nppes_provider_first_name, nppes_provider_last_org_name, specialty_description
+GROUP BY prescriber.npi, nppes_provider_first_name, nppes_provider_last_org_name, specialty_description
 ORDER BY SUM(total_claim_count) DESC
 LIMIT 1;
 
@@ -77,9 +77,30 @@ SELECT specialty_description
 FROM prescriber
 	LEFT JOIN prescription ON prescriber.npi = prescription.npi
 GROUP BY specialty_description
-HAVING COUNT(prescription.npi) = 0;
+HAVING COUNT(prescription.npi) = 0
+ORDER BY specialty_description;
 
---Answer: 
+--Answer: Marriage and Family Therapist, Contractor, Physical Therapist in Private Practice, Developmental Therapist, Radiology Practitioner
+--Assistant, Hospital, Specialist/Technologist/Other, Chiropractic, Occupational Therapist in Private Practice, Licensed Practical Nurse, 
+--Midwife, Medical Genetics, Physical Therapy Assistant, Ambulatory Surgical Center, and Undefined Physician Type appear in the prescriber 
+--table, but have no associated prescriptions in the prescription table.
+
+
+--2d. **Difficult Bonus:** *Do not attempt until you have solved all other problems!* 
+--For each specialty, report the percentage of total claims by that specialty which are for opioids. 
+--Which specialties have a high percentage of opioids?
+-- *All credit here due to Dibran and Matt!*
+SELECT specialty_description,
+	SUM(CASE WHEN opioid_drug_flag = 'Y' THEN total_claim_count ELSE 0 END) as opioid_claims,
+	SUM(total_claim_count) AS total_claims,
+	SUM(CASE WHEN opioid_drug_flag = 'Y' THEN total_claim_count ELSE 0 END) * 100.0 / SUM(total_claim_count) AS opioid_percentage
+FROM prescriber
+INNER JOIN prescription
+USING(npi)
+INNER JOIN drug
+USING(drug_name)
+GROUP BY specialty_description
+ORDER BY opioid_percentage DESC;
 
 
 --3a. Which drug (generic_name) had the highest total drug cost?
@@ -94,14 +115,14 @@ LIMIT 1;
 
 
 --3b. Which drug (generic_name) has the hightest total cost per day?
-SELECT generic_name, SUM(total_drug_cost) / SUM(total_day_supply)
+SELECT generic_name, ROUND(SUM(total_drug_cost) / SUM(total_day_supply),2)
 FROM prescription
 	INNER JOIN drug ON prescription.drug_name = drug.drug_name
 GROUP BY generic_name
 ORDER BY SUM(total_drug_cost) / SUM(total_day_supply) DESC
 LIMIT 1;
 
---Answer: "C1 ESTERASE INHIBITOR" has the highest total cost per day at 3495.2190186915887850
+--Answer: "C1 ESTERASE INHIBITOR" has the highest total cost per day at 3495.22
 
 
 --4a. For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' 
@@ -115,7 +136,7 @@ FROM drug;
 
 
 --4b. Building off of the query you wrote for part a, determine whether more was spent (total_drug_cost) on opioids or on antibiotics. 
-SELECT SUM(total_drug_cost),
+SELECT SUM(total_drug_cost)::MONEY,
 	CASE WHEN opioid_drug_flag = 'Y' THEN 'opioid'
 	WHEN antibiotic_drug_flag = 'Y' THEN 'antibiotic'
 	ELSE 'neither' END
@@ -123,7 +144,8 @@ FROM drug
 	INNER JOIN prescription ON drug.drug_name = prescription.drug_name
 GROUP BY CASE WHEN opioid_drug_flag = 'Y' THEN 'opioid'
 	WHEN antibiotic_drug_flag = 'Y' THEN 'antibiotic'
-	ELSE 'neither' END;
+	ELSE 'neither' END
+ORDER BY SUM(total_drug_cost) DESC;
 	
 --Answer: More was spent on opioids than antibiotics 
 
@@ -171,7 +193,8 @@ SELECT prescription.drug_name, total_claim_count,
 	CASE WHEN opioid_drug_flag = 'Y' THEN 'opioid' ELSE 'other' END
 FROM prescription
 	INNER JOIN drug ON prescription.drug_name = drug.drug_name
-WHERE total_claim_count > 2999;
+WHERE total_claim_count > 2999
+ORDER BY total_claim_count DESC;
 
 
 --6c. Add another column to your answer from the previous part which gives the prescriber first and last name associated with each row.
